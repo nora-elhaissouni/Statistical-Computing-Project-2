@@ -1,0 +1,235 @@
+---
+title: "Project 2 - Nora Elhaissouni"
+output: html_document
+date: "2023-09-26"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(tidytuesdayR)
+library(lubridate)
+library(dplyr)
+```
+
+## Part 1A: Exponential transformation
+
+```{r}
+
+exp_fun<- function(x,k){
+  i<- 1 # k needs to be greater than or equal to 1
+  val = 0 #
+  output = 1 
+  while (i<= k) {
+    val <- output + ((x^i))/(factorial(i))
+    output <- val
+    i = i+1
+  }
+  return(output)
+}
+# Example
+exp_fun(2,2)
+
+# I made this simple function by directly using the given equation, but to do a summation I used this trick where you initialize a variable to be 0, then include it to the loop and reassign it to the new value calculated. I used the example to make sure it was accurate and also checked some other values.
+
+``` 
+
+## Part 1B: Sample mean and sample standard deviation
+
+### Mean Function
+
+```{r}
+sample_mean<- function(data){
+  N<- length(data)
+  i<- 1
+  initial_sum <- 0
+  while (i<=N) {
+    N_sum<- initial_sum + data[i]
+    initial_sum <- N_sum
+    i = i+1
+  }
+  mean = initial_sum/(N)
+  return(mean)
+}
+# Example to check my answer
+z<- c(7, 5,6,3,5,6,3,3,7)
+sample_mean(z)
+
+# Here I made another function for the mean. Again, I initialized i and initial sum in order to keep the while loop going (using i) and to add a summation of the values in the vector to calculate the mean.
+```
+
+### Standard Deviation Function
+
+```{r}
+
+sample_sd<- function(data){
+  N<- length(data)
+  i<- 1
+  initial_sum <- 0
+  while (i<=N) {
+    std_sum<- initial_sum + (data[i]-sample_mean(data))^2
+    initial_sum <- std_sum
+    i = i+1
+  }
+  sd = sqrt(initial_sum/(N))
+  return(sd)
+}
+# Example to check answer
+f<- c(7, 5,6,3,5,6,3,3,7)
+sample_sd(f)
+
+#I made a function for the sample std deviation. What I did here again was use i and initial sum similar to what I did for the mean function. calculating a standard deviation is pretty simple given the formula so I did that and plugged in a vector to check my answer.
+
+```
+
+## Part 1C: Confidence Interval Function
+
+```{r}
+calculate_CI<- function(data, conf){
+  N<- length(data)
+  x = sample_mean(data)
+  alpha <- 1 - conf
+  degrees_freedom <- N - 1
+  t_score <- qt(p = alpha / 2, df = degrees_freedom, lower.tail = FALSE)
+  upper_bound <- x+t_score*(sample_sd(data)/sqrt(N))
+  lower_bound <- x-t_score*(sample_sd(data)/sqrt(N))
+  return(c(lower_bound, upper_bound))
+}
+
+# Example to check answer
+m<- c(7, 5,6,3,5,6,3,3,7)
+calculate_CI(m, 0.95)
+dat <- data.frame(m = m)
+fit <- lm(m ~ 1, dat)
+
+# Calculate a 95% confidence interval
+confint(fit, level = 0.95)
+
+# creating a function for CI. Using the equation and codes given this was simple to make since Ididn't need a for or while loop. I simply defined the variables I needed for the equation and found the upper and lower bound, saving it into a vector since you can't return multiple things when I originally tried. After I checked my answer with the given code. I found it was slightly off, but am assuming this is a rounding error.
+
+```
+
+## Part 2: Wrangling Data
+
+```{r, include=FALSE}
+tuesdata <- tidytuesdayR::tt_load("2020-01-07")
+rainfall <- tuesdata$rainfall
+temperature <- tuesdata$temperature
+library(tidyverse)
+glimpse(rainfall)
+glimpse(temperature)
+```
+
+#### Set up for Part 3
+Note - I used the include = FALSE to hide the code chunk that downloaded the data
+```{r}
+rainfall<- rainfall %>%
+  na.omit() %>%
+  mutate(date = ymd(paste(year, month, day, sep = "-")),
+         city_name = as.character(toupper(city_name)))%>% 
+  select(-c(month, day))
+wrangled_data<- rainfall %>%
+  inner_join(temperature, by = c("city_name", "date"))
+
+#Here I am removing NA values, using the ymd function inside the mutate to add a new column with the date in the year-month-day style. Next I am removing the columns that are unneeded since it says to only keep the year. For the wrangled_data, i used inner join since we only want observations in both datasets. 
+```
+
+## Part 3A: Plotting temperature Data Over Time
+
+```{r}
+wrangled_data %>%
+  na.omit() %>%
+  filter(year >= 2014) %>%
+  group_by(city_name, year, .drop = TRUE) %>%
+  summarise(temperature_min = min(temperature),
+    temperature_max = max(temperature),
+    .groups = 'drop'
+  ) %>%
+  pivot_longer(
+    cols = c(temperature_min, temperature_max),
+    names_to = "temperature_type",
+    values_to = "temperature"
+  ) %>%
+  ggplot(aes(x = year, y = temperature, color = temperature_type)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~city_name)+
+  guides(
+    color = guide_legend(title = "Temperature Type: Min/Max")
+  )+
+  labs(
+    title = "Temperature Range by City and Time",
+    xlab = "Year",
+    ylab = "Temperature",
+    subtitle = "Here we see the minimum and maximum temperature for each city from 2014 onwards",
+    caption = "Generally the range for maximum and minimum is large. Canberra has the widest range."
+  )+theme(legend.position = "none")
+
+
+# Here I am creating the plot 3A asks for after sorting the data to have the minimum and maximum temperature for each city for each year. I used pivot longer so that for each city there are two values for the year, one for max temp and the other for minimum temp. Doing this allowed me to proceed to ggplot where I created a line plot between the points of maximum and minimum temperature over the years (faceted by each city). 
+```
+## Part 3B: Plotting rainfall over time
+
+```{r}
+wrangled_error_function <- function(city, time) {
+  if (!any(wrangled_data$city_name == city)) {
+    stop("Error: City name does not exist in the data")
+  }
+  if (!any(wrangled_data$year == time)) {
+    stop("Error: Time does not exist in the dataset")
+  }
+}
+
+wrangled_function <- function(city, time_yrs) {
+  wrangled_error_function(city, time_yrs)
+  wrangled_data %>%
+    filter(city_name == city, year == time_yrs) %>%
+    ggplot(aes(log(rainfall))) +
+    geom_histogram() +
+    labs(
+      title = "Rainfall Frequency",
+      caption = "Note - taking the log of the rainfall",
+      subtitle = paste("We see the amount of rainfall for", city, "in the year", time_yrs),
+      x = "Rainfall",
+      y = "Frequency"
+    )
+}
+
+wrangled_function("MELBOURNE", 2005)
+
+# I made two separate functions. The first one checks the conditions for if the year and city name are in the dataset. The second one is the function for creating the ggplot but first I call the error function so that if the inputted city name or year is not in the dataset itll stop the plot from running and if not then the ggplot code will run. I ran the code changing the years and misspelling the city names to ensure it is correct.
+
+    
+```
+
+## Part 4: Apply functions and plot
+
+### Part 4A: 
+
+```{r}
+rain_df <-
+  wrangled_data %>%
+  filter(year >= 2014) %>% group_by(city_name, year) %>% summarise(rain_mean = sample_mean(rainfall), rain_sd = sample_sd(rainfall), ci_lower_bound = calculate_CI(rainfall, 0.95)[1], ci_upper_bound = calculate_CI(rainfall, 0.95)[2], .groups = 'drop')
+rain_df
+
+#Here I made a dataset filtering for the years greater than 2014 with the city name, year, and then using summarise to create new columns for the mean, standard deviation, and confidence interval using the functions I originally made. For the confidence interval columns I made my CI function return a vector of lower bound as the first index and upper bound as the second index. Thus, I was able to simply use indexing to create their individual columns.
+  
+```
+### Part 4B:
+
+```{r}
+rain_df %>% ggplot(aes(x = year, y = rain_mean))+
+  geom_point(color = "blue")+
+  facet_grid(city_name~.)+
+  geom_line()+
+  geom_errorbar(aes(ymin = ci_lower_bound, ymax = ci_upper_bound, color = "red"))+
+   labs(
+      title = "Rainfall Mean For Each City Per Year",
+      caption = "The bars represent the 95% Confidence Interval",
+      subtitle = paste("We see how rainfall average varies by city each year"), x = "Year",
+      y = "Average Rainfall") + theme(legend.position = "none")
+
+# Using the rainfall_df I created a plot of the mean for each year. I used the simple geompoint to plot the means each year and then I faceted to each city seperate. I then used geom line to get a line between the average rainfall of each year for each country. Then using geom_errorbar I made the upper and lower bounds for CI into error bars. I used blue for the dots of the means and red for the error bar to show the contrast between them. 
+  
+```
+
+

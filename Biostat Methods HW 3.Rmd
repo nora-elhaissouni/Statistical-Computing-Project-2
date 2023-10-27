@@ -1,0 +1,278 @@
+---
+title: "Biostat Methods HW 3"
+output: html_document
+date: "2023-10-04"
+---
+
+#Question 1B:
+Plot the likelihood associated with this experiment. Renormalize the likelihood so
+that its maximum is one. Does the likelihood suggest that the coin is fair?
+
+```{r setup, include=FALSE}
+p=seq(0,1,length=101)
+like=((10*9*8)/factorial(3))*(p^7*(1-p)^3)
+plot(p,like/max(like),type="l",col="blue",lwd=3,
+xlab="Probability of heads",ylab="likelihood",cex.lab=1.3,
+cex.axis=1.3,col.axis="blue")
+lines(p,rep(1/8,101),col="red",lwd=3)
+lines(p,rep(1/16,101),col="orange",lwd=3)
+```
+
+
+```{r}
+p_neg_bin=seq(0,1,length=101)
+like_neg_bin=(36*(p_neg_bin)^7*(1-p_neg_bin)^3) # 36 is 9 chose 2
+plot(p_neg_bin,like_neg_bin/max(like_neg_bin),type="l",col="blue",lwd=3,
+xlab="Probability of heads",ylab="likelihood",cex.lab=1.3,
+cex.axis=1.3,col.axis="blue")
+lines(p_neg_bin,rep(1/8,101),col="red",lwd=3)
+lines(p_neg_bin,rep(1/16,101),col="orange",lwd=3)
+
+```
+Problem 2
+```{r}
+
+## Part 2 B
+#pnorm(mean = 0, sd = 1, 1.2)
+
+
+mean_dbp <- 80
+sd_dbp <- 12
+
+percentiles <- c(90, 95, 97.5)
+
+# Calculate the corresponding DBP values
+for (i in 1:length(percentiles)){
+ print(qnorm(percentiles[i]/100, mean = mean_dbp, sd = sd_dbp)) 
+}
+
+## Part C
+z_scores<- c(1,2,3)
+for (i in 1:length(z_scores)){
+  print(pnorm(mean = 0, sd = 1, z_scores[i]))
+}
+
+## Part D
+1 - pnorm(mean = 0, sd = 1, 10/11) #gives general prob of having SBP greater than 140
+1 - pnorm(mean = 120, sd = 11, 140)
+
+
+
+
+```
+# Redo 2 without standardizing
+```{r}
+# part a
+pnorm(mean = 80, sd = 12, 90)
+
+## Part 2 B
+#pnorm(mean = 0, sd = 1, 1.2)
+mean_dbp <- 80
+sd_dbp <- 12
+percentiles <- c(90, 95, 97.5)
+# Calculate the corresponding DBP values
+for (i in 1:length(percentiles)){
+ print(qnorm(percentiles[i]/100, mean = mean_dbp, sd = sd_dbp)) 
+}
+
+# Part 2 C
+
+#SBP
+sd_away<- c(1,2,3)
+for (i in 1:length(sd_away)){
+  print(1 - pnorm(mean = 120, sd = 11, 11*sd_away[i]+120))
+}
+#DBP
+```
+
+```{r}
+sd_away<- c(1,2,3)
+print("SBP")
+for (i in 1:length(sd_away)){
+  print(1 - pnorm(mean = 120, sd = 11, 11*sd_away[i]+120))
+}
+#DBP
+sd_away<- c(1,2,3)
+print("DBP")
+for (i in 1:length(sd_away)){
+  print(1 - pnorm(mean = 80, sd = 12, 12*sd_away[i]+80))
+}
+```
+
+```{r}
+sd_away<- c(1,2,3)
+for (i in 1:length(sd_away)){
+  print(1 - pnorm(mean = 80, sd = 12, 12*sd_away[i]+80))
+}
+
+# Part D
+prob<- 1-pnorm(mean = 120, sd = 11, 140)
+choose(10,5)*(prob^5)*((1-prob)^5)
+
+# Part E
+choose(1000,500)*(prob^500)*((1-prob)^500)
+
+# Part F
+prob<- 1-pnorm(mean = 120, sd = 11, 140)
+(1 - pnorm(mean = 80, sd = 12, 90))*prob
+
+# Part g
+sbp_val<- pnorm(mean = 120, sd = 11/sqrt(200), 81.3)
+dbp_val <- pnorm(mean = 80, sd = 12/sqrt(200), 81.3)
+
+print(paste("The probability for SBP smaller than 81.3 is:", sbp_val))
+print(paste("The probability for DBP smaller than 81.3 is:", dbp_val))
+
+
+# Given parameters for DBP
+
+
+```
+## Question 3
+```{r}
+# 3A
+set.seed(7)
+exp_dist<- rexp(1000, rate = 1)
+mean(exp_dist)
+var(exp_dist)^2
+#These numbers should estimate the mean and variance of an esponential distribution with rate 1. Thus, it should be close to 1 for both the mean and variance and increasing the sample would bring the values even closer to 1.
+
+# 3B
+
+# Calculate sequential sample means
+# This makes the sequence
+initial_val = 0
+for (i in 1:1000){
+  cum_sum = exp_dist[i] + initial_val
+  initial_val = cum_sum
+  saved[i]<- initial_val/i
+}
+
+# Plot the sequential sample means
+plot(saved, type = "l", col = "blue", xlab = "Observation Number", ylab = "Sequential Sample Mean", main = "Sequential Sample Means")
+abline(h = 1, col = "red", lty = 2)  #horizontal line at the theoretical mean
+
+
+# Extra
+
+df<- data.frame(
+  observation_number = 1:1000,
+  observation = exp_dist,
+  seq_mean = saved
+)
+df %>% ggplot(aes(x = observation_number, y = seq_mean))+geom_point()+geom_hline(yintercept = 1, linetype = "dashed", color = "red")
+
+# 3C
+
+df<- data.frame(
+  observation_number = 1:1000,
+  observation = exp_dist,
+  seq_mean = saved
+)
+
+df %>% ggplot(aes(x = observation))+geom_histogram(binwidth = 0.3, color = "blue")+labs(title = "Histogram of 1,000 Exponential Observations", x = "Observation Value", y = "Frequency")
+
+
+# 3D
+
+sample_means_n<- 1000
+observations_n<- 100
+set.seed(721)
+for (i in 1:1000){
+  exp_vals<- rexp(100, rate = 1)
+  mean_val[i]<- mean(exp_vals)
+}
+mean(mean_val)
+var(mean_val)
+1/(sqrt(1000))
+
+# Part 3E
+
+data<- data.frame(
+  observation = 1:1000,
+  avg_of_hundred = mean_val
+)
+normalized_vals <- numeric(length = 1000)
+for (i in 1:1000){
+  normalized_vals[i]<- (data$avg_of_hundred[i] - 1)/sqrt(var(mean_val))
+}
+data %>% mutate(normalized_vals = normalized_vals)
+
+data %>% ggplot(aes(x = normalized_vals))+geom_histogram(binwidth = 0.1, color = "blue")+labs(title = "Histogram of Mean of 100 averaged Exponential Observations", x = "Observation Value", y = "Frequency")
+
+#3F
+set.seed(721)
+var_val<- numeric(length = 1000)
+for (i in 1:1000){
+  exp_vals<- rexp(100, rate = 1)
+  var_val[i]<- var(exp_vals)
+}
+mean(var_val)
+```
+
+# Question 5
+```{r}
+# 5D
+time_failure <- data.frame(
+  observations = 1:10,
+  time = c(2.0, 1.5, 1.0, 1.2, 1.3, 4.4, 1.0, 4.9, 1.5, 1.2)
+)
+
+likelihood_function <- function(beta, data) {
+  sum(log(beta) - (beta + 1) * log(data$time))
+}
+time = c(2.0, 1.5, 1.0, 1.2, 1.3, 4.4, 1.0, 4.9, 1.5, 1.2)
+betas <- seq(1, 10, length = 100)
+for i (in 1:10){
+  likelihood_vals<- log(beta[i]) - (beta[i] + 1) * log(time[i])
+}
+
+plot(betas, log_likelihoods, type = "l", col = "blue", lwd = 2,
+     xlab = "Beta Values", ylab = "Log-Likelihood", cex.lab = 1.3, cex.axis = 1.3, col.axis = "blue")
+
+
+time <- c(2.0, 1.5, 1.0, 1.2, 1.3, 4.4, 1.0, 4.9, 1.5, 1.2)
+betas <- seq(1, 10, length = 100)
+
+# Initialize a vector to store likelihood values
+likelihood_vals <- numeric(length = length(time))
+
+# Loop over observations
+time <- c(2.0, 1.5, 1.0, 1.2, 1.3, 4.4, 1.0, 4.9, 1.5, 1.2)
+betas <- seq(1, 10, length = 100)
+
+# Initialize a vector to store total log-likelihood values
+total_likelihood <- numeric(length = length(betas))
+
+# Calculate total log-likelihood for each beta, considering all observations
+for (i in 1:length(time)) {
+  total_likelihood <- total_likelihood + log(betas) - (betas + 1) * log(time[i])
+}
+
+# Plot the total log-likelihood
+plot(betas, total_likelihood, type = "l", col = "blue", lwd = 2,
+     xlab = "Beta Values", ylab = "Total Log-Likelihood", cex.lab = 1.3, cex.axis = 1.3, col.axis = "blue")
+
+
+
+
+
+
+#beta vals
+betas <- seq(1, 10, length = 100)
+
+#likelihood calc for each of the betas
+log_likelihoods <- sapply(betas, likelihood_function, data = time_failure)
+
+plot(betas, log_likelihoods, type = "l", col = "blue", lwd = 2,
+     xlab = "Beta Values", ylab = "Log-Likelihood", cex.lab = 1.3, cex.axis = 1.3, col.axis = "blue")
+
+sum(time_failure$time)
+
+beta = numeric(length =)
+
+beta = 10/(sum(log(time[i])))
+
+
+```
+
